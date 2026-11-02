@@ -9,7 +9,32 @@ const historyKey='knu-food-history-v2';
 try{history=JSON.parse(localStorage.getItem(historyKey)||'[]');if(!Array.isArray(history))history=[]}catch{history=[]}
 const colors=['#93c5fd','#fda4af','#fde68a','#86efac','#c4b5fd','#fdba74','#67e8f9','#f9a8d4'];
 const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const filtered=()=>restaurants.filter(x=>($('category').value==='all'||x.category===$('category').value)&&x.price<=Number($('budget').value));
+
+const filtered = () => {
+  const category = $('category').value;
+  const budget = Number($('budget').value);
+
+  return restaurants.filter(restaurant => {
+    if (
+      category !== 'all' &&
+      restaurant.category !== category
+    ) {
+      return false;
+    }
+
+    const menus = restaurantMenus.filter(
+      menu => menu.restaurant_id === restaurant.id
+    );
+
+    if (menus.length > 0) {
+      return menus.some(menu => menu.price <= budget);
+    }
+
+    // 메뉴가 없는 식당은 기존 예상 가격 사용
+    return restaurant.price <= budget;
+  });
+};
+
 function eligible(){const list=filtered();const fresh=list.filter(x=>!history.includes(x.id));return fresh.length?fresh:list}
 function setStatus(message){$('adminStatus').textContent=message}
 function updateAdmin(){ $('adminOnly').classList.toggle('hidden',!admin);$('logout').classList.toggle('hidden',!admin);$('login').classList.toggle('hidden',admin);$('email').classList.toggle('hidden',admin);$('password').classList.toggle('hidden',admin);render() }
@@ -196,7 +221,86 @@ row.append(menuBtn, editBtn, deleteBtn);
   drawWheel();
 }
 function drawWheel(){if(spinning)return;const list=eligible().slice(0,12),wheel=$('wheel');wheel.style.transform='rotate(0deg)';rotation=0;if(!list.length){wheel.style.background='#e2e8f0';wheel.replaceChildren();return}wheel.style.background=`conic-gradient(${list.map((x,i)=>`${colors[i%colors.length]} ${i*360/list.length}deg ${(i+1)*360/list.length}deg`).join(',')})`;wheel.replaceChildren();list.forEach((x,i)=>{const t=document.createElement('span');t.className='wheel-label';t.style.transform=`rotate(${(i+.5)*360/list.length-90}deg) translate(36px,-50%)`;t.textContent=x.name;wheel.append(t)})}
-function show(x){$('result').classList.remove('hidden');$('result').innerHTML=`<div>🎉 오늘의 추천!</div><strong>${safe(x.name)}</strong><div>${safe(x.category)} · 예상 ${Number(x.price).toLocaleString('ko-KR')}원</div><a href="https://map.naver.com/p/search/${encodeURIComponent('경남대학교 '+x.name)}" target="_blank" rel="noopener noreferrer">🗺️ 네이버 지도에서 검색 ↗</a>`;history=[...history.filter(id=>id!==x.id),x.id].slice(-Math.max(1,restaurants.length));localStorage.setItem(historyKey,JSON.stringify(history))}
+function show(x) {
+  const result = $('result');
+  result.classList.remove('hidden');
+
+  const budget = Number($('budget').value);
+
+  const allMenus = restaurantMenus.filter(
+    menu => menu.restaurant_id === x.id
+  );
+
+  const affordableMenus = allMenus.filter(
+    menu => menu.price <= budget
+  );
+
+  const menuHtml = allMenus.length
+    ? `
+      <div style="
+        margin-top:16px;
+        padding:14px;
+        background:rgba(148,163,184,0.1);
+        border-radius:12px;
+        text-align:left;
+      ">
+        <div style="font-weight:700;margin-bottom:10px;">
+          🍽️ 예산에 맞는 메뉴
+        </div>
+        ${
+          affordableMenus.length
+            ? affordableMenus.map(menu => `
+                <div style="
+                  display:flex;
+                  justify-content:space-between;
+                  gap:12px;
+                  padding:6px 0;
+                  font-size:14px;
+                ">
+                  <span>${safe(menu.name)}</span>
+                  <strong>
+                    ${Number(menu.price).toLocaleString('ko-KR')}원
+                  </strong>
+                </div>
+              `).join('')
+            : '<small>예산에 맞는 메뉴가 없습니다.</small>'
+        }
+      </div>
+    `
+    : `
+      <div style="margin-top:12px;font-size:13px;">
+        등록된 메뉴가 없어 식당 예상 가격을 표시합니다.
+      </div>
+    `;
+
+  result.innerHTML = `
+    <div>🎉 오늘의 추천!</div>
+
+    <strong>${safe(x.name)}</strong>
+
+    <div>${safe(x.category)}</div>
+
+    ${menuHtml}
+
+    <a
+      href="https://map.naver.com/p/search/${encodeURIComponent('경남대학교 ' + x.name)}"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      🗺️ 네이버 지도에서 검색 ↗
+    </a>
+  `;
+
+  history = [
+    ...history.filter(id => id !== x.id),
+    x.id
+  ].slice(-Math.max(1, restaurants.length));
+
+  localStorage.setItem(
+    historyKey,
+    JSON.stringify(history)
+  );
+}
 function pick(){if(spinning)return;const list=eligible();if(!list.length){$('result').classList.remove('hidden');$('result').textContent='조건에 맞는 식당이 없습니다. 관리자가 식당을 등록하거나 필터를 변경해 주세요.';return}if(mode==='random'){show(list[Math.floor(Math.random()*list.length)]);drawWheel();return}const wheelList=list.slice(0,12),idx=Math.floor(Math.random()*wheelList.length),n=wheelList.length;const desired=(360-(idx+.5)*360/n)%360;rotation=1800+((desired+360)%360);spinning=true;$('pick').disabled=true;$('wheel').style.transform=`rotate(${rotation}deg)`;$('wheelInfo').textContent='두근두근...';setTimeout(()=>{show(wheelList[idx]);$('wheelInfo').textContent=`🎉 ${wheelList[idx].name}!`;$('pick').disabled=false;spinning=false;drawWheel()},4100)}
 function setMode(next){if(spinning)return;mode=next;$('randomTab').classList.toggle('active',mode==='random');$('wheelTab').classList.toggle('active',mode==='wheel');$('randomPanel').classList.toggle('hidden',mode!=='random');$('wheelPanel').classList.toggle('hidden',mode!=='wheel');$('pick').textContent=mode==='random'?'🎲 랜덤 추천하기':'🎡 룰렛 돌리기';$('result').classList.add('hidden');drawWheel()}
 $('randomTab').onclick=()=>setMode('random');$('wheelTab').onclick=()=>setMode('wheel');$('pick').onclick=pick;$('category').onchange=drawWheel;$('budget').onchange=drawWheel;
