@@ -548,6 +548,102 @@
   }
 }
 
+/* v2.0 2차 추천 결과 카드 */
+.result-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.result-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.result-favorite {
+  background: #fff1f2;
+  color: #be123c;
+  border-radius: 12px;
+  font-size: 25px;
+  padding: 5px 13px;
+  min-width: 48px;
+  min-height: 44px;
+}
+
+.result-favorite[aria-pressed="true"] {
+  background: #ffe4e6;
+}
+
+.result-name {
+  margin: 14px 0 10px;
+  font-size: clamp(24px, 5vw, 31px);
+  font-weight: 800;
+  color: #1e40af;
+  line-height: 1.4;
+}
+
+.result-meta {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.result-category {
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: 20px;
+  padding: 3px 12px;
+}
+
+.result-menus {
+  margin-top: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  text-align: left;
+}
+
+.result-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.result-menu-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
+
+.result-menu-row:last-child {
+  border-bottom: none;
+}
+
+.result-menu-row span:last-child {
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+@media (max-width: 520px) {
+  .result-menus {
+    padding: 12px;
+  }
+
+  .result-menu-row {
+    font-size: 13px;
+  }
+}
+
 </style></head><body><main class="wrap"><header><div><span class="pill">📍 경남대학교 주변</span><h1>오늘 뭐 먹지? 🍚</h1><p>메뉴 고민은 이제 그만! 랜덤으로 골라보자.</p></div></header><section class="card"><div class="filters"><div><label for="category">음식 종류</label><select id="category"><option value="all">전체</option><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select></div><div><label for="budget">1인 예산</label><select id="budget"><option value="999999">상관없음</option><option value="8000">8,000원 이하</option><option value="10000">10,000원 이하</option><option value="15000">15,000원 이하</option><option value="20000">20,000원 이하</option></select></div></div><p class="note">가격은 직접 등록한 예상 1인 식사 금액을 기준으로 필터링합니다.</p></section><section class="card"><div class="tabs"><button id="randomTab" class="active">🎲 랜덤 추천</button><button id="wheelTab">🎡 룰렛</button></div><div id="randomPanel" class="stage"><div class="emoji">🍽️</div><h2>오늘의 한 끼를 뽑아보세요</h2><p>등록한 식당 중 조건에 맞게 추천해 드려요.</p></div><div id="wheelPanel" class="stage hidden"><div class="pointer">▼</div><div id="wheel" class="wheel"></div><p id="wheelInfo">룰렛을 돌려 오늘의 식당을 정해보세요.</p></div><div class="actions"><button class="primary" id="pick">🎲 랜덤 추천하기</button><button class="muted" id="resetHistory">최근 추천 초기화</button></div><div id="result" class="result hidden" aria-live="polite"></div>
 <div class="recommend-scope">
   <label for="recommendScope">추천 대상</label>
@@ -575,6 +671,8 @@
 <div id="adminStatus" class="note">연결 상태 확인 중...</div><div class="row" style="margin:12px 0"><input id="email" type="email" placeholder="관리자 이메일" aria-label="관리자 이메일"><input id="password" type="password" placeholder="비밀번호" aria-label="비밀번호"><button id="login" type="button" class="secondary">로그인</button><button id="logout" type="button" class="muted hidden">로그아웃</button></div><div id="adminOnly" class="hidden"><form id="addForm"><div class="row"><input id="name" placeholder="식당 이름" required maxlength="60"><select id="newCategory"><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select><input id="price" type="number" min="1" max="1000000" placeholder="예상 가격(원)" required></div>
 
 <div class="actions"><button class="secondary" type="submit">+ 식당 추가</button></div></form></div>
+  </div>
+</details>
 <div class="restaurant-tools">
   <div>
     <label for="restaurantSearch">식당 검색</label>
@@ -602,9 +700,6 @@
   <span id="favoriteCount" class="note">즐겨찾기 0곳</span>
 </div>
 <div id="items" class="items"></div>
-  </div>
-</details>
-<CodeBlock language="css" editable>
 <p class="note">지도 버튼은 네이버 지도 검색으로 이동합니다. 가격은 관리자가 입력한 예상 금액입니다.</p></section></main>
 <!-- v1.4 관리자 편집창 -->
 <div id="editorOverlay"
