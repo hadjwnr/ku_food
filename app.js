@@ -5,6 +5,23 @@ const configured=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(config.supabase
 const client=configured && window.supabase ? window.supabase.createClient(config.supabaseUrl,config.supabaseAnonKey) : null;
 let restaurants=[], history=[], mode='random', spinning=false, rotation=0, admin=false;
 let restaurantMenus = [];
+
+const favoritesKey = 'knu-food-favorites-v1';
+const recentKey = 'knu-food-recent-v1';
+
+function readStoredArray(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(value) ? value : [];
+  } catch {
+    return [];
+  }
+}
+
+let favorites = readStoredArray(favoritesKey);
+let recentPicks = readStoredArray(recentKey);
+let favoritesOnly = false;
+
 const historyKey='knu-food-history-v2';
 try{history=JSON.parse(localStorage.getItem(historyKey)||'[]');if(!Array.isArray(history))history=[]}catch{history=[]}
 const colors=['#93c5fd','#fda4af','#fde68a','#86efac','#c4b5fd','#fdba74','#67e8f9','#f9a8d4'];
@@ -87,6 +104,49 @@ function getRestaurantPrice(restaurant) {
 
   return Math.min(...menus.map(m => Number(m.price)));
 }
+
+function toggleFavorite(id) {
+  if (favorites.includes(id)) {
+    favorites = favorites.filter(x => x !== id);
+  } else {
+    favorites = [...favorites, id];
+  }
+
+  localStorage.setItem(favoritesKey, JSON.stringify(favorites));
+  render();
+}
+
+function renderRecent() {
+  const el = $('recentList');
+  el.replaceChildren();
+
+  const entries = recentPicks
+    .map(id => restaurants.find(r => r.id === id))
+    .filter(Boolean);
+
+  if (!entries.length) {
+    el.textContent = '아직 추천 기록이 없습니다.';
+    return;
+  }
+
+  entries.forEach(x => {
+    const row = document.createElement('div');
+    row.className = 'recent-entry';
+
+    const name = document.createElement('strong');
+    name.textContent = x.name;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'secondary';
+    button.textContent = '다시 보기';
+    button.onclick = () => show(x, false);
+
+    row.append(name, button);
+    el.append(row);
+  });
+}
+
 function render() {
   const el = $('items');
   el.replaceChildren();
@@ -95,7 +155,10 @@ const search = $('restaurantSearch').value.trim().toLowerCase();
 const sort = $('restaurantSort').value;
 
 const visibleRestaurants = restaurants
-  .filter(x => x.name.toLowerCase().includes(search))
+  .filter(x =>
+    x.name.toLowerCase().includes(search) &&
+    (!favoritesOnly || favorites.includes(x.id))
+  )
   .sort((a, b) => {
     if (sort === 'priceAsc') {
       return getRestaurantPrice(a) - getRestaurantPrice(b);
@@ -142,6 +205,24 @@ ${safe(x.category)} · ${menus.length ? '메뉴 최저' : '예상'} ${getRestaur
       </div>
     `;
 
+  
+const favoriteBtn = document.createElement('button');
+favoriteBtn.type = 'button';
+favoriteBtn.className = 'favorite-btn';
+
+const isFavorite = favorites.includes(x.id);
+
+favoriteBtn.textContent = isFavorite ? '♥' : '♡';
+favoriteBtn.setAttribute('aria-pressed', String(isFavorite));
+favoriteBtn.setAttribute(
+  'aria-label',
+  `${x.name} 즐겨찾기 ${isFavorite ? '해제' : '추가'}`
+);
+
+favoriteBtn.onclick = () => toggleFavorite(x.id);
+
+row.append(favoriteBtn);
+
     if (admin) {
       const actions = document.createElement('div');
       actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
@@ -185,11 +266,25 @@ ${safe(x.category)} · ${menus.length ? '메뉴 최저' : '예상'} ${getRestaur
     el.append(row);
   });
 
-  $('count').textContent = `(${restaurants.length}곳)`;
-  drawWheel();
+$('count').textContent = `(${visibleRestaurants.length}/${restaurants.length}곳)`;
+
+$('favoriteCount').textContent =
+  `즐겨찾기 ${favorites.filter(id => restaurants.some(r => r.id === id)).length}곳`;
+
+$('favoritesOnly').textContent =
+  favoritesOnly ? '♥ 즐겨찾기만 보는 중' : '♡ 즐겨찾기만 보기';
+
+$('favoritesOnly').setAttribute(
+  'aria-pressed',
+  String(favoritesOnly)
+);
+
+renderRecent();
+drawWheel();
+
 }
 function drawWheel(){if(spinning)return;const list=eligible().slice(0,12),wheel=$('wheel');wheel.style.transform='rotate(0deg)';rotation=0;if(!list.length){wheel.style.background='#e2e8f0';wheel.replaceChildren();return}wheel.style.background=`conic-gradient(${list.map((x,i)=>`${colors[i%colors.length]} ${i*360/list.length}deg ${(i+1)*360/list.length}deg`).join(',')})`;wheel.replaceChildren();list.forEach((x,i)=>{const t=document.createElement('span');t.className='wheel-label';t.style.transform=`rotate(${(i+.5)*360/list.length-90}deg) translate(36px,-50%)`;t.textContent=x.name;wheel.append(t)})}
-function show(x) {
+function show(x, saveHistory = true) {
   const result = $('result');
   result.classList.remove('hidden');
 
@@ -258,6 +353,20 @@ function show(x) {
       🗺️ 네이버 지도에서 검색 ↗
     </a>
   `;
+  
+if (!saveHistory) return;
+
+recentPicks = [
+  x.id,
+  ...recentPicks.filter(id => id !== x.id)
+].slice(0, 10);
+
+localStorage.setItem(
+  recentKey,
+  JSON.stringify(recentPicks)
+);
+
+renderRecent();
 
   history = [
     ...history.filter(id => id !== x.id),
@@ -544,4 +653,18 @@ function openMenuItemEditor(restaurant, menu) {
 }
 $('restaurantSearch').addEventListener('input', render);
 $('restaurantSort').addEventListener('change', render);
+
+$('favoritesOnly').onclick = () => {
+  favoritesOnly = !favoritesOnly;
+  render();
+};
+
+$('clearRecent').onclick = () => {
+  if (!confirm('최근 추천 기록을 모두 삭제할까요?')) return;
+
+  recentPicks = [];
+  localStorage.setItem(recentKey, '[]');
+  renderRecent();
+};
+
 (async()=>{await load();await checkAdmin();if(client){client.auth.onAuthStateChange(()=>{setTimeout(checkAdmin,0)})}})();
