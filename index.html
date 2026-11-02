@@ -377,6 +377,79 @@
   }
 }
 
+/* v1.9 식당 관리자 메뉴 통합 */
+.restaurant-manage {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+.restaurant-manage > summary {
+  list-style: none;
+  cursor: pointer;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 10px;
+  padding: 8px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.restaurant-manage > summary::-webkit-details-marker {
+  display: none;
+}
+
+.restaurant-manage-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  width: 175px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, .15);
+}
+
+.restaurant-manage-menu button {
+  display: block;
+  width: 100%;
+  padding: 11px 10px;
+  border-radius: 8px;
+  background: transparent !important;
+  color: #334155 !important;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.restaurant-manage-menu button:hover {
+  background: #f1f5f9 !important;
+}
+
+.restaurant-manage-menu .danger-action {
+  color: #dc2626 !important;
+}
+
+.restaurant-manage-menu .danger-action:hover {
+  background: #fef2f2 !important;
+}
+
+/* 기존 식당 카드의 모바일 규칙보다 우선 적용 */
+@media (max-width: 600px) {
+  .item > .restaurant-manage {
+    width: auto;
+    flex-basis: auto;
+    margin-left: auto;
+  }
+
+  .restaurant-manage-menu {
+    right: 0;
+  }
+}
+
 </style></head><body><main class="wrap"><header><div><span class="pill">📍 경남대학교 주변</span><h1>오늘 뭐 먹지? 🍚</h1><p>메뉴 고민은 이제 그만! 랜덤으로 골라보자.</p></div></header><section class="card"><div class="filters"><div><label for="category">음식 종류</label><select id="category"><option value="all">전체</option><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select></div><div><label for="budget">1인 예산</label><select id="budget"><option value="999999">상관없음</option><option value="8000">8,000원 이하</option><option value="10000">10,000원 이하</option><option value="15000">15,000원 이하</option><option value="20000">20,000원 이하</option></select></div></div><p class="note">가격은 직접 등록한 예상 1인 식사 금액을 기준으로 필터링합니다.</p></section><section class="card"><div class="tabs"><button id="randomTab" class="active">🎲 랜덤 추천</button><button id="wheelTab">🎡 룰렛</button></div><div id="randomPanel" class="stage"><div class="emoji">🍽️</div><h2>오늘의 한 끼를 뽑아보세요</h2><p>등록한 식당 중 조건에 맞게 추천해 드려요.</p></div><div id="wheelPanel" class="stage hidden"><div class="pointer">▼</div><div id="wheel" class="wheel"></div><p id="wheelInfo">룰렛을 돌려 오늘의 식당을 정해보세요.</p></div><div class="actions"><button class="primary" id="pick">🎲 랜덤 추천하기</button><button class="muted" id="resetHistory">최근 추천 초기화</button></div><div id="result" class="result hidden" aria-live="polite"></div>
 <div class="recent-section">
   <div class="recent-heading">
