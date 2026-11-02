@@ -450,6 +450,104 @@
   }
 }
 
+/* v2.0 추천 결과 디자인 개선 */
+
+.result {
+  max-width: 520px;
+  margin: 20px auto 0;
+  padding: 26px 22px;
+  background: linear-gradient(145deg, #eff6ff, #ffffff);
+  border: 1px solid #bfdbfe;
+  border-radius: 22px;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, .08);
+  text-align: center;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.result strong {
+  display: inline-block;
+  font-size: clamp(23px, 5vw, 30px);
+  color: #1e40af;
+  line-height: 1.4;
+}
+
+.result a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 10px 16px;
+  margin-top: 14px;
+  border-radius: 11px;
+  background: #2563eb;
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background .2s ease;
+}
+
+.result a:hover {
+  background: #1d4ed8;
+}
+
+.result a:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+/* 추천 버튼 */
+.actions {
+  gap: 10px;
+}
+
+.actions button {
+  transition: transform .15s ease, opacity .15s ease;
+}
+
+.actions button:active {
+  transform: scale(.98);
+}
+
+.actions button:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+/* 모바일 */
+@media (max-width: 600px) {
+  .result {
+    padding: 22px 16px;
+    border-radius: 18px;
+  }
+
+  .result strong {
+    font-size: 24px;
+  }
+
+  .result a {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .actions {
+    flex-wrap: wrap;
+  }
+
+  .actions button {
+    min-height: 44px;
+  }
+}
+
+/* 움직임 최소화 설정 존중 */
+@media (prefers-reduced-motion: reduce) {
+  .actions button,
+  .result a {
+    transition: none;
+  }
+}
+
 </style></head><body><main class="wrap"><header><div><span class="pill">📍 경남대학교 주변</span><h1>오늘 뭐 먹지? 🍚</h1><p>메뉴 고민은 이제 그만! 랜덤으로 골라보자.</p></div></header><section class="card"><div class="filters"><div><label for="category">음식 종류</label><select id="category"><option value="all">전체</option><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select></div><div><label for="budget">1인 예산</label><select id="budget"><option value="999999">상관없음</option><option value="8000">8,000원 이하</option><option value="10000">10,000원 이하</option><option value="15000">15,000원 이하</option><option value="20000">20,000원 이하</option></select></div></div><p class="note">가격은 직접 등록한 예상 1인 식사 금액을 기준으로 필터링합니다.</p></section><section class="card"><div class="tabs"><button id="randomTab" class="active">🎲 랜덤 추천</button><button id="wheelTab">🎡 룰렛</button></div><div id="randomPanel" class="stage"><div class="emoji">🍽️</div><h2>오늘의 한 끼를 뽑아보세요</h2><p>등록한 식당 중 조건에 맞게 추천해 드려요.</p></div><div id="wheelPanel" class="stage hidden"><div class="pointer">▼</div><div id="wheel" class="wheel"></div><p id="wheelInfo">룰렛을 돌려 오늘의 식당을 정해보세요.</p></div><div class="actions"><button class="primary" id="pick">🎲 랜덤 추천하기</button><button class="muted" id="resetHistory">최근 추천 초기화</button></div><div id="result" class="result hidden" aria-live="polite"></div>
 <div class="recent-section">
   <div class="recent-heading">
