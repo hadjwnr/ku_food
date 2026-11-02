@@ -234,45 +234,72 @@ favoriteBtn.onclick = () => toggleFavorite(x.id);
 
 row.append(favoriteBtn);
 
-    if (admin) {
-      const actions = document.createElement('div');
-      actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+if (admin) {
+  const manage = document.createElement('details');
+  manage.className = 'restaurant-manage';
+  
+manage.addEventListener('toggle', () => {
+  if (!manage.open) return;
 
-      const editBtn = document.createElement('button');
-      editBtn.type = 'button';
-      editBtn.textContent = '식당 수정';
-      editBtn.onclick = () => openRestaurantEditor(x);
+  document.querySelectorAll('.restaurant-manage').forEach(other => {
+    if (other !== manage) other.open = false;
+  });
+});
 
-      const menuBtn = document.createElement('button');
-      menuBtn.type = 'button';
-      menuBtn.textContent = '메뉴 관리';
-      menuBtn.onclick = () => openMenuEditor(x);
+  const summary = document.createElement('summary');
+  summary.textContent = '⚙️ 관리';
+  summary.setAttribute('aria-label', `${x.name} 관리 메뉴 열기`);
 
-      const deleteBtn = document.createElement('button');
-      deleteBtn.type = 'button';
-      deleteBtn.textContent = '삭제';
+  const menu = document.createElement('div');
+  menu.className = 'restaurant-manage-menu';
 
-      deleteBtn.onclick = async () => {
-        if (!confirm(`${x.name} 식당과 등록된 메뉴를 모두 삭제할까요?`)) return;
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.textContent = '✏️ 식당 정보 수정';
+  editBtn.onclick = () => {
+    manage.open = false;
+    openRestaurantEditor(x);
+  };
 
-        deleteBtn.disabled = true;
+  const menuBtn = document.createElement('button');
+  menuBtn.type = 'button';
+  menuBtn.textContent = '🍽️ 메뉴 관리';
+  menuBtn.onclick = () => {
+    manage.open = false;
+    openMenuEditor(x);
+  };
 
-        const { error } = await client
-          .from('restaurants')
-          .delete()
-          .eq('id', x.id);
+  const deleteBtn = document.createElement('button');
+  deleteBtn.type = 'button';
+  deleteBtn.textContent = '🗑️ 식당 삭제';
+  deleteBtn.className = 'danger-action';
 
-        if (error) {
-          alert('삭제 실패: ' + error.message);
-          deleteBtn.disabled = false;
-        } else {
-          await load();
-        }
-      };
+  deleteBtn.onclick = async () => {
+    manage.open = false;
 
-      actions.append(editBtn, menuBtn, deleteBtn);
-      row.append(actions);
+    if (!confirm(
+      `${x.name} 식당과 등록된 메뉴를 모두 삭제할까요?`
+    )) return;
+
+    deleteBtn.disabled = true;
+
+    const { error } = await client
+      .from('restaurants')
+      .delete()
+      .eq('id', x.id);
+
+    if (error) {
+      alert('삭제 실패: ' + error.message);
+      deleteBtn.disabled = false;
+    } else {
+      await load();
     }
+  };
+
+  menu.append(editBtn, menuBtn, deleteBtn);
+  manage.append(summary, menu);
+  row.append(manage);
+}
 
     el.append(row);
   });
