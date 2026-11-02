@@ -14,7 +14,111 @@ function setStatus(message){$('adminStatus').textContent=message}
 function updateAdmin(){ $('adminOnly').classList.toggle('hidden',!admin);$('logout').classList.toggle('hidden',!admin);$('login').classList.toggle('hidden',admin);$('email').classList.toggle('hidden',admin);$('password').classList.toggle('hidden',admin);render() }
 async function checkAdmin(){if(!client){admin=false;setStatus('Supabase 설정이 필요합니다. README.md를 확인하세요.');updateAdmin();return}try{const {data:{user},error}=await client.auth.getUser();if(error && error.name!=='AuthSessionMissingError')throw error;if(!user){admin=false;setStatus('식당 목록은 누구나 볼 수 있습니다. 관리자만 로그인하여 수정할 수 있습니다.')}else{const {data,error:roleError}=await client.from('restaurant_admins').select('user_id').eq('user_id',user.id).maybeSingle();if(roleError)throw roleError;admin=!!data;setStatus(admin?'관리자 로그인됨 · 식당 추가/삭제 가능':'로그인됨 · 관리자 권한 없음')} }catch(e){admin=false;setStatus('권한 확인 오류: '+e.message)}updateAdmin()}
 async function load(){if(!client){setStatus('config.js에 Supabase 연결 정보를 입력하세요.');render();return}const {data,error}=await client.from('restaurants').select('id,name,category,price').order('name');if(error){setStatus('식당 조회 실패: '+error.message);return}restaurants=data||[];render()}
-function render(){const el=$('items');el.replaceChildren();restaurants.forEach(x=>{const row=document.createElement('div');row.className='item';row.innerHTML=`<div><strong>${safe(x.name)}</strong><small>${safe(x.category)} · ${Number(x.price).toLocaleString('ko-KR')}원</small></div>`;if(admin){const b=document.createElement('button');b.textContent='삭제';b.type='button';b.onclick=async()=>{if(!confirm(`${x.name} 식당을 삭제할까요?`))return;b.disabled=true;const {error}=await client.from('restaurants').delete().eq('id',x.id);if(error){alert('삭제 실패: '+error.message);b.disabled=false}else await load()};row.append(b)}el.append(row)});$('count').textContent=`(${restaurants.length}곳)`;drawWheel()}
+function render(){
+  const el = $('items');
+  el.replaceChildren();
+
+  restaurants.forEach(x => {
+    const row = document.createElement('div');
+    row.className = 'item';
+
+    row.innerHTML = `
+      <div>
+        <strong>${safe(x.name)}</strong>
+        <small>
+          ${safe(x.category)} ·
+          ${Number(x.price).toLocaleString('ko-KR')}원
+        </small>
+      </div>
+    `;
+
+    if(admin){
+      const editBtn = document.createElement('button');
+      editBtn.textContent = '수정';
+      editBtn.type = 'button';
+
+      editBtn.onclick = async () => {
+        const name = prompt('식당 이름', x.name);
+        if(name === null) return;
+
+        const category = prompt(
+          '음식 종류 (한식/중식/일식/양식/분식/기타)',
+          x.category
+        );
+        if(category === null) return;
+
+        const priceInput = prompt('예상 가격 (원)', x.price);
+        if(priceInput === null) return;
+
+        const newName = name.trim();
+        const newCategory = category.trim();
+        const newPrice = Number(priceInput);
+
+        if(
+          !newName ||
+          newName.length > 60 ||
+          !['한식','중식','일식','양식','분식','기타'].includes(newCategory) ||
+          !Number.isInteger(newPrice) ||
+          newPrice <= 0 ||
+          newPrice > 1000000
+        ){
+          alert('입력한 식당 정보를 확인해 주세요.');
+          return;
+        }
+
+        editBtn.disabled = true;
+
+        const {error} = await client
+          .from('restaurants')
+          .update({
+            name: newName,
+            category: newCategory,
+            price: newPrice
+          })
+          .eq('id', x.id);
+
+        editBtn.disabled = false;
+
+        if(error){
+          alert('수정 실패: ' + error.message);
+          return;
+        }
+
+        await load();
+        alert('식당 정보가 수정되었습니다!');
+      };
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = '삭제';
+      deleteBtn.type = 'button';
+
+      deleteBtn.onclick = async () => {
+        if(!confirm(`${x.name} 식당을 삭제할까요?`)) return;
+
+        deleteBtn.disabled = true;
+
+        const {error} = await client
+          .from('restaurants')
+          .delete()
+          .eq('id', x.id);
+
+        if(error){
+          alert('삭제 실패: ' + error.message);
+          deleteBtn.disabled = false;
+        }else{
+          await load();
+        }
+      };
+
+      row.append(editBtn, deleteBtn);
+    }
+
+    el.append(row);
+  });
+
+  $('count').textContent = `(${restaurants.length}곳)`;
+  drawWheel();
+}
 function drawWheel(){if(spinning)return;const list=eligible().slice(0,12),wheel=$('wheel');wheel.style.transform='rotate(0deg)';rotation=0;if(!list.length){wheel.style.background='#e2e8f0';wheel.replaceChildren();return}wheel.style.background=`conic-gradient(${list.map((x,i)=>`${colors[i%colors.length]} ${i*360/list.length}deg ${(i+1)*360/list.length}deg`).join(',')})`;wheel.replaceChildren();list.forEach((x,i)=>{const t=document.createElement('span');t.className='wheel-label';t.style.transform=`rotate(${(i+.5)*360/list.length-90}deg) translate(36px,-50%)`;t.textContent=x.name;wheel.append(t)})}
 function show(x){$('result').classList.remove('hidden');$('result').innerHTML=`<div>🎉 오늘의 추천!</div><strong>${safe(x.name)}</strong><div>${safe(x.category)} · 예상 ${Number(x.price).toLocaleString('ko-KR')}원</div><a href="https://map.naver.com/p/search/${encodeURIComponent('경남대학교 '+x.name)}" target="_blank" rel="noopener noreferrer">🗺️ 네이버 지도에서 검색 ↗</a>`;history=[...history.filter(id=>id!==x.id),x.id].slice(-Math.max(1,restaurants.length));localStorage.setItem(historyKey,JSON.stringify(history))}
 function pick(){if(spinning)return;const list=eligible();if(!list.length){$('result').classList.remove('hidden');$('result').textContent='조건에 맞는 식당이 없습니다. 관리자가 식당을 등록하거나 필터를 변경해 주세요.';return}if(mode==='random'){show(list[Math.floor(Math.random()*list.length)]);drawWheel();return}const wheelList=list.slice(0,12),idx=Math.floor(Math.random()*wheelList.length),n=wheelList.length;const desired=(360-(idx+.5)*360/n)%360;rotation=1800+((desired+360)%360);spinning=true;$('pick').disabled=true;$('wheel').style.transform=`rotate(${rotation}deg)`;$('wheelInfo').textContent='두근두근...';setTimeout(()=>{show(wheelList[idx]);$('wheelInfo').textContent=`🎉 ${wheelList[idx].name}!`;$('pick').disabled=false;spinning=false;drawWheel()},4100)}
