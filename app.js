@@ -76,11 +76,40 @@ async function loadMenus() {
 
   restaurantMenus = data || [];
 }
+function getRestaurantPrice(restaurant) {
+  const menus = restaurantMenus.filter(
+    m => m.restaurant_id === restaurant.id
+  );
+
+  if (menus.length === 0) {
+    return Number(restaurant.price);
+  }
+
+  return Math.min(...menus.map(m => Number(m.price)));
+}
 function render() {
   const el = $('items');
   el.replaceChildren();
 
-  restaurants.forEach(x => {
+const search = $('restaurantSearch').value.trim().toLowerCase();
+const sort = $('restaurantSort').value;
+
+const visibleRestaurants = restaurants
+  .filter(x => x.name.toLowerCase().includes(search))
+  .sort((a, b) => {
+    if (sort === 'priceAsc') {
+      return getRestaurantPrice(a) - getRestaurantPrice(b);
+    }
+
+    if (sort === 'priceDesc') {
+      return getRestaurantPrice(b) - getRestaurantPrice(a);
+    }
+
+    return a.name.localeCompare(b.name, 'ko');
+  });
+
+visibleRestaurants.forEach(x => {
+
     const row = document.createElement('div');
     row.className = 'item';
 
@@ -103,7 +132,7 @@ function render() {
           <summary style="cursor:pointer;">
             <strong>${safe(x.name)}</strong>
             <small style="display:block;">
-              ${safe(x.category)} · 예상 ${Number(x.price).toLocaleString('ko-KR')}원
+${safe(x.category)} · ${menus.length ? '메뉴 최저' : '예상'} ${getRestaurantPrice(x).toLocaleString('ko-KR')}원
             </small>
           </summary>
           <div style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(148,163,184,0.1);">
@@ -513,4 +542,6 @@ function openMenuItemEditor(restaurant, menu) {
     openMenuEditor(restaurant);
   };
 }
+$('restaurantSearch').addEventListener('input', render);
+$('restaurantSort').addEventListener('change', render);
 (async()=>{await load();await checkAdmin();if(client){client.auth.onAuthStateChange(()=>{setTimeout(checkAdmin,0)})}})();
