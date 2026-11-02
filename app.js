@@ -421,6 +421,13 @@ function setMode(next){if(spinning)return;mode=next;$('randomTab').classList.tog
 $('randomTab').onclick=()=>setMode('random');$('wheelTab').onclick=()=>setMode('wheel');$('pick').onclick=pick;$('category').onchange=drawWheel;$('budget').onchange=drawWheel;
 $('resetHistory').onclick=()=>{history=[];localStorage.setItem(historyKey,'[]');drawWheel();$('result').classList.add('hidden')};
 $('login').onclick=async()=>{if(!client)return alert('Supabase 연결 설정을 먼저 완료하세요.');const email=$('email').value.trim(),password=$('password').value;if(!email||!password)return alert('이메일과 비밀번호를 입력하세요.');$('login').disabled=true;const {error}=await client.auth.signInWithPassword({email,password});$('password').value='';$('login').disabled=false;if(error)return alert('로그인 실패: '+error.message);await checkAdmin()};
+/* 관리자 비밀번호 입력 후 Enter로 로그인 */
+$('password').addEventListener('keydown', (event) => {
+  if (event.key === 'Enter' && !event.isComposing) {
+    event.preventDefault();
+    $('login').click();
+  }
+});
 $('logout').onclick=async()=>{if(!client)return;const {error}=await client.auth.signOut();if(error)return alert(error.message);await checkAdmin()};
 $('addForm').onsubmit=async e=>{e.preventDefault();if(!client||!admin)return;const name=$('name').value.trim(),price=Number($('price').value);if(!name||name.length>60||!Number.isInteger(price)||price<=0||price>1000000)return alert('이름과 가격을 확인하세요.');const btn=$('addForm').querySelector('[type=submit]');btn.disabled=true;const {error}=await client.from('restaurants').insert({name,category:$('newCategory').value,price});btn.disabled=false;if(error)return alert('추가 실패: '+error.message);$('addForm').reset();await load()};
 
