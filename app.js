@@ -4,6 +4,7 @@ const config=window.FOOD_CONFIG||{};
 const configured=/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(config.supabaseUrl||'') && !String(config.supabaseAnonKey||'').startsWith('YOUR_');
 const client=configured && window.supabase ? window.supabase.createClient(config.supabaseUrl,config.supabaseAnonKey) : null;
 let restaurants=[], history=[], mode='random', spinning=false, rotation=0, admin=false;
+let restaurantMenus = [];
 const historyKey='knu-food-history-v2';
 try{history=JSON.parse(localStorage.getItem(historyKey)||'[]');if(!Array.isArray(history))history=[]}catch{history=[]}
 const colors=['#93c5fd','#fda4af','#fde68a','#86efac','#c4b5fd','#fdba74','#67e8f9','#f9a8d4'];
@@ -13,7 +14,44 @@ function eligible(){const list=filtered();const fresh=list.filter(x=>!history.in
 function setStatus(message){$('adminStatus').textContent=message}
 function updateAdmin(){ $('adminOnly').classList.toggle('hidden',!admin);$('logout').classList.toggle('hidden',!admin);$('login').classList.toggle('hidden',admin);$('email').classList.toggle('hidden',admin);$('password').classList.toggle('hidden',admin);render() }
 async function checkAdmin(){if(!client){admin=false;setStatus('Supabase 설정이 필요합니다. README.md를 확인하세요.');updateAdmin();return}try{const {data:{user},error}=await client.auth.getUser();if(error && error.name!=='AuthSessionMissingError')throw error;if(!user){admin=false;setStatus('식당 목록은 누구나 볼 수 있습니다. 관리자만 로그인하여 수정할 수 있습니다.')}else{const {data,error:roleError}=await client.from('restaurant_admins').select('user_id').eq('user_id',user.id).maybeSingle();if(roleError)throw roleError;admin=!!data;setStatus(admin?'관리자 로그인됨 · 식당 추가/삭제 가능':'로그인됨 · 관리자 권한 없음')} }catch(e){admin=false;setStatus('권한 확인 오류: '+e.message)}updateAdmin()}
-async function load(){if(!client){setStatus('config.js에 Supabase 연결 정보를 입력하세요.');render();return}const {data,error}=await client.from('restaurants').select('id,name,category,price').order('name');if(error){setStatus('식당 조회 실패: '+error.message);return}restaurants=data||[];render()}
+async function load() {
+  if (!client) {
+    setStatus('config.js에 Supabase 연결 정보를 입력하세요.');
+    render();
+    return;
+  }
+
+  const { data, error } = await client
+    .from('restaurants')
+    .select('id,name,category,price')
+    .order('name');
+
+  if (error) {
+    setStatus('식당 조회 실패: ' + error.message);
+    return;
+  }
+
+  restaurants = data || [];
+
+  await loadMenus();
+  render();
+}
+async function loadMenus() {
+  if (!client) return;
+
+  const { data, error } = await client
+    .from('restaurant_menus')
+    .select('id,restaurant_id,name,price')
+    .order('price', { ascending: true });
+
+  if (error) {
+    console.error('메뉴 조회 실패:', error.message);
+    return;
+  }
+
+  restaurantMenus = data || [];
+}
+
 function render(){
   const el = $('items');
   el.replaceChildren();
@@ -22,15 +60,47 @@ function render(){
     const row = document.createElement('div');
     row.className = 'item';
 
-    row.innerHTML = `
-      <div>
-        <strong>${safe(x.name)}</strong>
-        <small>
-          ${safe(x.category)} ·
-          ${Number(x.price).toLocaleString('ko-KR')}원
-        </small>
+const menus = restaurantMenus.filter(
+  m => m.restaurant_id === x.id
+);
+
+const menuHtml = menus.length
+  ? menus.map(m => `
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        gap:12px;
+        padding:6px 0;
+        font-size:14px;
+      ">
+        <span>${safe(m.name)}</span>
+        <strong>${Number(m.price).toLocaleString('ko-KR')}원</strong>
       </div>
-    `;
+    `).join('')
+  : '<small>등록된 메뉴가 없습니다.</small>';
+
+row.innerHTML = `
+  <div style="flex:1;min-width:0;">
+    <details>
+      <summary style="cursor:pointer;">
+        <strong>${safe(x.name)}</strong>
+        <small style="display:block;">
+          ${safe(x.category)} ·
+          예상 ${Number(x.price).toLocaleString('ko-KR')}원
+        </small>
+      </summary>
+      <div style="
+        margin-top:12px;
+        padding:12px;
+        border-radius:10px;
+        background:rgba(148,163,184,0.1);
+      ">
+        ${menuHtml}
+      </div>
+    </details>
+  </div>
+`;
+
 
     if(admin){
       const editBtn = document.createElement('button');
@@ -194,7 +264,11 @@ async function manageMenus(restaurant) {
     if (error) alert('추가 실패: ' + error.message);
     else {
       alert('메뉴가 등록되었습니다!');
-      return manageMenus(restaurant);
+
+await loadMenus();
+render();
+return manageMenus(restaurant);
+
     }
   }
 
@@ -244,7 +318,11 @@ async function manageMenus(restaurant) {
       if (error) alert('수정 실패: ' + error.message);
       else {
         alert('메뉴가 수정되었습니다!');
-        return manageMenus(restaurant);
+
+await loadMenus();
+render();
+return manageMenus(restaurant);
+
       }
     }
 
@@ -259,7 +337,11 @@ async function manageMenus(restaurant) {
       if (error) alert('삭제 실패: ' + error.message);
       else {
         alert('메뉴가 삭제되었습니다!');
-        return manageMenus(restaurant);
+
+await loadMenus();
+render();
+return manageMenus(restaurant);
+
       }
     }
   }
