@@ -1,5 +1,104 @@
 <!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>경남대 오늘 뭐 먹지?</title><style>
 :root{font-family:system-ui,-apple-system,'Noto Sans KR',sans-serif;color:#18212f;background:#f5f7fb}*{box-sizing:border-box}body{margin:0}.wrap{max-width:880px;margin:auto;padding:24px 16px 60px}header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}h1{font-size:clamp(24px,5vw,36px);margin:5px 0}p{color:#64748b;margin:6px 0}.pill{background:#e0edff;color:#2555a5;border-radius:30px;padding:8px 12px;font-size:13px}.card{background:white;border:1px solid #e5eaf2;border-radius:22px;padding:22px;margin-bottom:16px;box-shadow:0 8px 25px #17253c08}.tabs{display:flex;gap:8px;margin-bottom:18px}button,select,input{font:inherit}button{cursor:pointer;border:0;border-radius:12px;padding:12px 16px;font-weight:700}.tabs button{flex:1;background:#edf1f7;color:#475569}.tabs button.active{background:#2563eb;color:white}.filters{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}select,input{width:100%;border:1px solid #d8e0ea;border-radius:10px;padding:11px;background:white}.stage{text-align:center;padding:20px 0 10px}.stage h2{font-size:26px;margin:12px 0 5px}.stage .emoji{font-size:44px}.primary{background:#2563eb;color:white;min-width:200px}.secondary{background:#eaf1ff;color:#1d4ed8}.muted{background:#f1f5f9;color:#334155}.actions{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:20px}.result{padding:18px;background:#eff6ff;border-radius:15px;margin:18px auto 0;max-width:460px}.result strong{font-size:23px}.result a{color:#1d4ed8;display:inline-block;margin-top:10px;font-weight:700}.wheel{width:min(330px,78vw);aspect-ratio:1;border-radius:50%;margin:14px auto 18px;border:9px solid white;box-shadow:0 6px 24px #0f172a24;position:relative;transition:transform 4s cubic-bezier(.15,.75,.12,1);background:conic-gradient(#93c5fd 0 60deg,#fda4af 60deg 120deg,#fde68a 120deg 180deg,#86efac 180deg 240deg,#c4b5fd 240deg 300deg,#fdba74 300deg 360deg)}.wheel:after{content:'🍚';position:absolute;inset:42%;display:grid;place-items:center;background:white;border-radius:50%;font-size:26px}.pointer{font-size:28px;color:#2563eb;margin-bottom:-20px;position:relative;z-index:2}.wheel-label{position:absolute;left:50%;top:50%;font-size:11px;font-weight:800;transform-origin:0 0;white-space:nowrap;max-width:95px;overflow:hidden;text-overflow:ellipsis}.row{display:flex;gap:8px}.row input{flex:2}.row select{flex:1}.items{display:grid;gap:8px;margin-top:14px}.item{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#f8fafc;border-radius:12px;padding:12px}.item small{display:block;color:#64748b;margin-top:3px}.item button{background:#fee2e2;color:#991b1b;padding:8px 10px}.note{font-size:13px;color:#64748b;line-height:1.6}.hidden{display:none!important}@media(max-width:520px){.card{padding:16px}.filters{grid-template-columns:1fr}.row{flex-wrap:wrap}.row input{flex-basis:100%}}
-</style></head><body><main class="wrap"><header><div><span class="pill">📍 경남대학교 주변</span><h1>오늘 뭐 먹지? 🍚</h1><p>메뉴 고민은 이제 그만! 랜덤으로 골라보자.</p></div></header><section class="card"><div class="filters"><div><label for="category">음식 종류</label><select id="category"><option value="all">전체</option><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select></div><div><label for="budget">1인 예산</label><select id="budget"><option value="999999">상관없음</option><option value="8000">8,000원 이하</option><option value="10000">10,000원 이하</option><option value="15000">15,000원 이하</option><option value="20000">20,000원 이하</option></select></div></div><p class="note">가격은 직접 등록한 예상 1인 식사 금액을 기준으로 필터링합니다.</p></section><section class="card"><div class="tabs"><button id="randomTab" class="active">🎲 랜덤 추천</button><button id="wheelTab">🎡 룰렛</button></div><div id="randomPanel" class="stage"><div class="emoji">🍽️</div><h2>오늘의 한 끼를 뽑아보세요</h2><p>등록한 식당 중 조건에 맞게 추천해 드려요.</p></div><div id="wheelPanel" class="stage hidden"><div class="pointer">▼</div><div id="wheel" class="wheel"></div><p id="wheelInfo">룰렛을 돌려 오늘의 식당을 정해보세요.</p></div><div class="actions"><button class="primary" id="pick">🎲 랜덤 추천하기</button><button class="muted" id="resetHistory">최근 추천 초기화</button></div><div id="result" class="result hidden" aria-live="polite"></div></section><section class="card"><h2>🏪 식당 관리 <span id="count"></span></h2><p class="note">식당 정보를 추가하면 추천과 룰렛에 바로 반영됩니다. 식당 목록은 Supabase에 저장되며 관리자만 변경할 수 있습니다.</p><div id="adminStatus" class="note">연결 상태 확인 중...</div><div class="row" style="margin:12px 0"><input id="email" type="email" placeholder="관리자 이메일" aria-label="관리자 이메일"><input id="password" type="password" placeholder="비밀번호" aria-label="비밀번호"><button id="login" type="button" class="secondary">로그인</button><button id="logout" type="button" class="muted hidden">로그아웃</button></div><div id="adminOnly" class="hidden"><form id="addForm"><div class="row"><input id="name" placeholder="식당 이름" required maxlength="60"><select id="newCategory"><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select><input id="price" type="number" min="1" max="1000000" placeholder="예상 가격(원)" required></div><div class="actions"><button class="secondary" type="submit">+ 식당 추가</button></div></form></div><div id="items" class="items"></div><p class="note">지도 버튼은 네이버 지도 검색으로 이동합니다. 가격은 관리자가 입력한 예상 금액입니다.</p></section></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+/* v1.4 관리자 편집창 */
+.editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.editor-box {
+  background: white;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 20px 60px #0003;
+}
+
+.editor-box h2 {
+  margin: 0 0 18px;
+}
+
+.editor-field {
+  margin-bottom: 14px;
+}
+
+.editor-field label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.editor-menu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5eaf2;
+}
+
+.editor-menu-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.editor-menu-actions button {
+  padding: 8px 10px;
+}
+
+.editor-box button:disabled {
+  opacity: .5;
+  cursor: wait;
+}
+
+@media (max-width: 520px) {
+  .editor-box {
+    padding: 18px;
+  }
+
+  .editor-actions {
+    flex-wrap: wrap;
+  }
+}
+</style></head><body><main class="wrap"><header><div><span class="pill">📍 경남대학교 주변</span><h1>오늘 뭐 먹지? 🍚</h1><p>메뉴 고민은 이제 그만! 랜덤으로 골라보자.</p></div></header><section class="card"><div class="filters"><div><label for="category">음식 종류</label><select id="category"><option value="all">전체</option><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select></div><div><label for="budget">1인 예산</label><select id="budget"><option value="999999">상관없음</option><option value="8000">8,000원 이하</option><option value="10000">10,000원 이하</option><option value="15000">15,000원 이하</option><option value="20000">20,000원 이하</option></select></div></div><p class="note">가격은 직접 등록한 예상 1인 식사 금액을 기준으로 필터링합니다.</p></section><section class="card"><div class="tabs"><button id="randomTab" class="active">🎲 랜덤 추천</button><button id="wheelTab">🎡 룰렛</button></div><div id="randomPanel" class="stage"><div class="emoji">🍽️</div><h2>오늘의 한 끼를 뽑아보세요</h2><p>등록한 식당 중 조건에 맞게 추천해 드려요.</p></div><div id="wheelPanel" class="stage hidden"><div class="pointer">▼</div><div id="wheel" class="wheel"></div><p id="wheelInfo">룰렛을 돌려 오늘의 식당을 정해보세요.</p></div><div class="actions"><button class="primary" id="pick">🎲 랜덤 추천하기</button><button class="muted" id="resetHistory">최근 추천 초기화</button></div><div id="result" class="result hidden" aria-live="polite"></div></section><section class="card"><h2>🏪 식당 관리 <span id="count"></span></h2><p class="note">식당 정보를 추가하면 추천과 룰렛에 바로 반영됩니다. 식당 목록은 Supabase에 저장되며 관리자만 변경할 수 있습니다.</p><div id="adminStatus" class="note">연결 상태 확인 중...</div><div class="row" style="margin:12px 0"><input id="email" type="email" placeholder="관리자 이메일" aria-label="관리자 이메일"><input id="password" type="password" placeholder="비밀번호" aria-label="비밀번호"><button id="login" type="button" class="secondary">로그인</button><button id="logout" type="button" class="muted hidden">로그아웃</button></div><div id="adminOnly" class="hidden"><form id="addForm"><div class="row"><input id="name" placeholder="식당 이름" required maxlength="60"><select id="newCategory"><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select><input id="price" type="number" min="1" max="1000000" placeholder="예상 가격(원)" required></div><div class="actions"><button class="secondary" type="submit">+ 식당 추가</button></div></form></div><div id="items" class="items"></div><p class="note">지도 버튼은 네이버 지도 검색으로 이동합니다. 가격은 관리자가 입력한 예상 금액입니다.</p></section></main>
+<!-- v1.4 관리자 편집창 -->
+<div id="editorOverlay"
+     class="editor-overlay hidden"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="editorTitle">
+
+  <div class="editor-box">
+
+    <h2 id="editorTitle">정보 편집</h2>
+
+    <div id="editorContent"></div>
+
+    <div class="editor-actions">
+      <button id="editorClose"
+              type="button"
+              class="muted">
+        닫기
+      </button>
+    </div>
+
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="./config.js"></script>
 <script src="./app.js" defer></script></body></html>
