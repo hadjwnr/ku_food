@@ -325,59 +325,52 @@ function show(x, saveHistory = true) {
   result.classList.remove('hidden');
 
   const budget = Number($('budget').value);
-
   const allMenus = restaurantMenus.filter(
     menu => menu.restaurant_id === x.id
   );
-
   const affordableMenus = allMenus.filter(
-    menu => menu.price <= budget
+    menu => Number(menu.price) <= budget
   );
+
+  const isFavorite = favorites.includes(x.id);
+  const price = getRestaurantPrice(x).toLocaleString('ko-KR');
 
   const menuHtml = allMenus.length
     ? `
-      <div style="
-        margin-top:16px;
-        padding:14px;
-        background:rgba(148,163,184,0.1);
-        border-radius:12px;
-        text-align:left;
-      ">
-        <div style="font-weight:700;margin-bottom:10px;">
-          🍽️ 예산에 맞는 메뉴
-        </div>
+      <div class="result-menus">
+        <div class="result-section-title">🍽️ 예산에 맞는 메뉴</div>
         ${
           affordableMenus.length
             ? affordableMenus.map(menu => `
-                <div style="
-                  display:flex;
-                  justify-content:space-between;
-                  gap:12px;
-                  padding:6px 0;
-                  font-size:14px;
-                ">
-                  <span>${safe(menu.name)}</span>
-                  <strong>
-                    ${Number(menu.price).toLocaleString('ko-KR')}원
-                  </strong>
-                </div>
-              `).join('')
-            : '<small>예산에 맞는 메뉴가 없습니다.</small>'
+              <div class="result-menu-row">
+                <span>${safe(menu.name)}</span>
+                <span>${Number(menu.price).toLocaleString('ko-KR')}원</span>
+              </div>
+            `).join('')
+            : '<p class="note">예산에 맞는 메뉴가 없습니다.</p>'
         }
       </div>
     `
-    : `
-      <div style="margin-top:12px;font-size:13px;">
-        등록된 메뉴가 없어 식당 예상 가격을 표시합니다.
-      </div>
-    `;
+    : '<p class="note">등록된 메뉴가 없어 예상 가격을 표시합니다.</p>';
 
   result.innerHTML = `
-    <div>🎉 오늘의 추천!</div>
+    <div class="result-top">
+      <span class="result-label">🎉 오늘의 추천</span>
+      <button
+        type="button"
+        id="resultFavorite"
+        class="result-favorite"
+        aria-pressed="${isFavorite}"
+        aria-label="${safe(x.name)} 즐겨찾기 ${isFavorite ? '해제' : '추가'}"
+      >${isFavorite ? '♥' : '♡'}</button>
+    </div>
 
-    <strong>${safe(x.name)}</strong>
+    <div class="result-name">${safe(x.name)}</div>
 
-    <div>${safe(x.category)}</div>
+    <div class="result-meta">
+      <span class="result-category">${safe(x.category)}</span>
+      <span>${allMenus.length ? '메뉴 최저' : '예상'} ${price}원</span>
+    </div>
 
     ${menuHtml}
 
@@ -385,24 +378,27 @@ function show(x, saveHistory = true) {
       href="https://map.naver.com/p/search/${encodeURIComponent('경남대학교 ' + x.name)}"
       target="_blank"
       rel="noopener noreferrer"
-    >
-      🗺️ 네이버 지도에서 검색 ↗
-    </a>
+    >🗺️ 네이버 지도에서 검색</a>
   `;
-  
-if (!saveHistory) return;
 
-recentPicks = [
-  x.id,
-  ...recentPicks.filter(id => id !== x.id)
-].slice(0, 10);
+  $('resultFavorite').onclick = () => {
+    toggleFavorite(x.id);
+    show(x, false);
+  };
 
-localStorage.setItem(
-  recentKey,
-  JSON.stringify(recentPicks)
-);
+  if (!saveHistory) return;
 
-renderRecent();
+  recentPicks = [
+    x.id,
+    ...recentPicks.filter(id => id !== x.id)
+  ].slice(0, 10);
+
+  localStorage.setItem(
+    recentKey,
+    JSON.stringify(recentPicks)
+  );
+
+  renderRecent();
 
   history = [
     ...history.filter(id => id !== x.id),
