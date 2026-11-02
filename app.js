@@ -38,7 +38,7 @@ const filtered = () => {
 function eligible(){const list=filtered();const fresh=list.filter(x=>!history.includes(x.id));return fresh.length?fresh:list}
 function setStatus(message){$('adminStatus').textContent=message}
 function updateAdmin(){ $('adminOnly').classList.toggle('hidden',!admin);$('logout').classList.toggle('hidden',!admin);$('login').classList.toggle('hidden',admin);$('email').classList.toggle('hidden',admin);$('password').classList.toggle('hidden',admin);render() }
-async function checkAdmin(){if(!client){admin=false;setStatus('Supabase 설정이 필요합니다. README.md를 확인하세요.');updateAdmin();return}try{const {data:{user},error}=await client.auth.getUser();if(error && error.name!=='AuthSessionMissingError')throw error;if(!user){admin=false;setStatus('식당 목록은 누구나 볼 수 있습니다. 관리자만 로그인하여 수정할 수 있습니다.')}else{const {data,error:roleError}=await client.from('restaurant_admins').select('user_id').eq('user_id',user.id).maybeSingle();if(roleError)throw roleError;admin=!!data;setStatus(admin?'관리자 로그인됨 · 식당 추가/삭제 가능':'로그인됨 · 관리자 권한 없음')} }catch(e){admin=false;setStatus('권한 확인 오류: '+e.message)}updateAdmin()}
+async function checkAdmin(){if(!client){admin=false;setStatus('Supabase 설정이 필요합니다. README.md를 확인하세요.');updateAdmin();return}try{const {data:{user},error}=await client.auth.getUser();if(error && error.name!=='AuthSessionMissingError')throw error;if(!user){admin=false;setStatus('식당 목록은 누구나 볼 수 있습니다. 관리자만 로그인하여 수정할 수 있습니다.')}else{const {data,error:roleError}=await client.from('restaurant_admins').select('user_id').eq('user_id',user.id).maybeSingle();if(roleError)throw roleError;admin=!!data;setStatus(admin?'관리자 로그인됨 · 식당 및 메뉴 관리 가능':'로그인됨 · 관리자 권한 없음')} }catch(e){admin=false;setStatus('권한 확인 오류: '+e.message)}updateAdmin()}
 async function load() {
   if (!client) {
     setStatus('config.js에 Supabase 연결 정보를 입력하세요.');
@@ -76,8 +76,7 @@ async function loadMenus() {
 
   restaurantMenus = data || [];
 }
-
-function render(){
+function render() {
   const el = $('items');
   el.replaceChildren();
 
@@ -85,133 +84,73 @@ function render(){
     const row = document.createElement('div');
     row.className = 'item';
 
-const menus = restaurantMenus.filter(
-  m => m.restaurant_id === x.id
-);
+    const menus = restaurantMenus.filter(
+      m => m.restaurant_id === x.id
+    );
 
-const menuHtml = menus.length
-  ? menus.map(m => `
-      <div style="
-        display:flex;
-        justify-content:space-between;
-        gap:12px;
-        padding:6px 0;
-        font-size:14px;
-      ">
-        <span>${safe(m.name)}</span>
-        <strong>${Number(m.price).toLocaleString('ko-KR')}원</strong>
+    const menuHtml = menus.length
+      ? menus.map(m => `
+          <div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;font-size:14px;">
+            <span>${safe(m.name)}</span>
+            <strong>${Number(m.price).toLocaleString('ko-KR')}원</strong>
+          </div>
+        `).join('')
+      : '<small>등록된 메뉴가 없습니다.</small>';
+
+    row.innerHTML = `
+      <div style="flex:1;min-width:0;">
+        <details>
+          <summary style="cursor:pointer;">
+            <strong>${safe(x.name)}</strong>
+            <small style="display:block;">
+              ${safe(x.category)} · 예상 ${Number(x.price).toLocaleString('ko-KR')}원
+            </small>
+          </summary>
+          <div style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(148,163,184,0.1);">
+            ${menuHtml}
+          </div>
+        </details>
       </div>
-    `).join('')
-  : '<small>등록된 메뉴가 없습니다.</small>';
+    `;
 
-row.innerHTML = `
-  <div style="flex:1;min-width:0;">
-    <details>
-      <summary style="cursor:pointer;">
-        <strong>${safe(x.name)}</strong>
-        <small style="display:block;">
-          ${safe(x.category)} ·
-          예상 ${Number(x.price).toLocaleString('ko-KR')}원
-        </small>
-      </summary>
-      <div style="
-        margin-top:12px;
-        padding:12px;
-        border-radius:10px;
-        background:rgba(148,163,184,0.1);
-      ">
-        ${menuHtml}
-      </div>
-    </details>
-  </div>
-`;
+    if (admin) {
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
 
-
-    if(admin){
       const editBtn = document.createElement('button');
-      editBtn.textContent = '수정';
       editBtn.type = 'button';
+      editBtn.textContent = '식당 수정';
+      editBtn.onclick = () => openRestaurantEditor(x);
 
-      editBtn.onclick = async () => {
-        const name = prompt('식당 이름', x.name);
-        if(name === null) return;
-
-        const category = prompt(
-          '음식 종류 (한식/중식/일식/양식/분식/기타)',
-          x.category
-        );
-        if(category === null) return;
-
-        const priceInput = prompt('예상 가격 (원)', x.price);
-        if(priceInput === null) return;
-
-        const newName = name.trim();
-        const newCategory = category.trim();
-        const newPrice = Number(priceInput);
-
-        if(
-          !newName ||
-          newName.length > 60 ||
-          !['한식','중식','일식','양식','분식','기타'].includes(newCategory) ||
-          !Number.isInteger(newPrice) ||
-          newPrice <= 0 ||
-          newPrice > 1000000
-        ){
-          alert('입력한 식당 정보를 확인해 주세요.');
-          return;
-        }
-
-        editBtn.disabled = true;
-
-        const {error} = await client
-          .from('restaurants')
-          .update({
-            name: newName,
-            category: newCategory,
-            price: newPrice
-          })
-          .eq('id', x.id);
-
-        editBtn.disabled = false;
-
-        if(error){
-          alert('수정 실패: ' + error.message);
-          return;
-        }
-
-        await load();
-        alert('식당 정보가 수정되었습니다!');
-      };
+      const menuBtn = document.createElement('button');
+      menuBtn.type = 'button';
+      menuBtn.textContent = '메뉴 관리';
+      menuBtn.onclick = () => openMenuEditor(x);
 
       const deleteBtn = document.createElement('button');
-      deleteBtn.textContent = '삭제';
       deleteBtn.type = 'button';
+      deleteBtn.textContent = '삭제';
 
       deleteBtn.onclick = async () => {
-        if(!confirm(`${x.name} 식당을 삭제할까요?`)) return;
+        if (!confirm(`${x.name} 식당과 등록된 메뉴를 모두 삭제할까요?`)) return;
 
         deleteBtn.disabled = true;
 
-        const {error} = await client
+        const { error } = await client
           .from('restaurants')
           .delete()
           .eq('id', x.id);
 
-        if(error){
+        if (error) {
           alert('삭제 실패: ' + error.message);
           deleteBtn.disabled = false;
-        }else{
+        } else {
           await load();
         }
       };
 
-const menuBtn = document.createElement('button');
-menuBtn.textContent = '메뉴 관리';
-menuBtn.type = 'button';
-menuBtn.onclick = () => manageMenus(x);
-
-row.append(menuBtn, editBtn, deleteBtn);
-
+      actions.append(editBtn, menuBtn, deleteBtn);
+      row.append(actions);
     }
 
     el.append(row);
@@ -308,146 +247,270 @@ $('resetHistory').onclick=()=>{history=[];localStorage.setItem(historyKey,'[]');
 $('login').onclick=async()=>{if(!client)return alert('Supabase 연결 설정을 먼저 완료하세요.');const email=$('email').value.trim(),password=$('password').value;if(!email||!password)return alert('이메일과 비밀번호를 입력하세요.');$('login').disabled=true;const {error}=await client.auth.signInWithPassword({email,password});$('password').value='';$('login').disabled=false;if(error)return alert('로그인 실패: '+error.message);await checkAdmin()};
 $('logout').onclick=async()=>{if(!client)return;const {error}=await client.auth.signOut();if(error)return alert(error.message);await checkAdmin()};
 $('addForm').onsubmit=async e=>{e.preventDefault();if(!client||!admin)return;const name=$('name').value.trim(),price=Number($('price').value);if(!name||name.length>60||!Number.isInteger(price)||price<=0||price>1000000)return alert('이름과 가격을 확인하세요.');const btn=$('addForm').querySelector('[type=submit]');btn.disabled=true;const {error}=await client.from('restaurants').insert({name,category:$('newCategory').value,price});btn.disabled=false;if(error)return alert('추가 실패: '+error.message);$('addForm').reset();await load()};
-async function manageMenus(restaurant) {
-  if (!client || !admin) return;
 
-  const { data, error } = await client
-    .from('restaurant_menus')
-    .select('id,name,price')
-    .eq('restaurant_id', restaurant.id)
-    .order('name');
+function openEditor(title, html) {
+  if (!admin || !client) return;
 
-  if (error) {
-    alert('메뉴 조회 실패: ' + error.message);
-    return;
-  }
+  $('editorTitle').textContent = title;
+  $('editorContent').innerHTML = html;
+  $('editorOverlay').classList.remove('hidden');
+}
 
-  const menus = data || [];
+function closeEditor() {
+  $('editorOverlay').classList.add('hidden');
+  $('editorContent').replaceChildren();
+}
 
-  const message = menus.length
-    ? menus.map((m, i) =>
-        `${i + 1}. ${m.name} - ${m.price.toLocaleString()}원`
-      ).join('\n')
-    : '등록된 메뉴가 없습니다.';
+$('editorClose').onclick = closeEditor;
 
-  const action = prompt(
-    `${restaurant.name} 메뉴 관리\n\n${message}\n\n` +
-    '1: 메뉴 추가\n2: 메뉴 수정\n3: 메뉴 삭제\n0: 닫기'
+$('editorOverlay').onclick = e => {
+  if (e.target === $('editorOverlay')) closeEditor();
+};
+
+function validPrice(value, allowZero = false) {
+  const n = Number(value);
+  return value.trim() !== '' &&
+    Number.isInteger(n) &&
+    n >= (allowZero ? 0 : 1) &&
+    n <= 1000000;
+}
+
+function openRestaurantEditor(restaurant) {
+  openEditor('식당 정보 수정', `
+    <form id="editRestaurantForm">
+      <div class="editor-field">
+        <label for="editRestaurantName">식당 이름</label>
+        <input id="editRestaurantName" maxlength="60" required
+               value="${safe(restaurant.name)}">
+      </div>
+
+      <div class="editor-field">
+        <label for="editRestaurantCategory">음식 종류</label>
+        <select id="editRestaurantCategory">
+          ${['한식','중식','일식','양식','분식','기타'].map(c =>
+            `<option value="${c}" ${c === restaurant.category ? 'selected' : ''}>${c}</option>`
+          ).join('')}
+        </select>
+      </div>
+
+      <div class="editor-field">
+        <label for="editRestaurantPrice">예상 가격 (원)</label>
+        <input id="editRestaurantPrice" type="number"
+               min="1" max="1000000" required
+               value="${restaurant.price}">
+      </div>
+
+      <div class="editor-actions">
+        <button class="primary" type="submit">변경사항 저장</button>
+      </div>
+    </form>
+  `);
+
+  $('editRestaurantForm').onsubmit = async e => {
+    e.preventDefault();
+
+    const name = $('editRestaurantName').value.trim();
+    const category = $('editRestaurantCategory').value;
+    const priceInput = $('editRestaurantPrice').value;
+
+    if (!name || name.length > 60 || !validPrice(priceInput)) {
+      alert('식당 이름과 가격을 확인해 주세요.');
+      return;
+    }
+
+    const btn = e.currentTarget.querySelector('[type=submit]');
+    btn.disabled = true;
+
+    const { error } = await client
+      .from('restaurants')
+      .update({ name, category, price: Number(priceInput) })
+      .eq('id', restaurant.id);
+
+    if (error) {
+      alert('수정 실패: ' + error.message);
+      btn.disabled = false;
+      return;
+    }
+
+    closeEditor();
+    await load();
+  };
+}
+
+function openMenuEditor(restaurant) {
+  if (!admin || !client) return;
+
+  const menus = restaurantMenus.filter(
+    m => m.restaurant_id === restaurant.id
   );
 
-  if (action === null || action === '0') return;
+  openEditor(`${restaurant.name} 메뉴 관리`, `
+    <div id="editorMenuList">
+      ${menus.length ? menus.map(m => `
+        <div class="editor-menu">
+          <div>
+            <strong>${safe(m.name)}</strong>
+            <small style="display:block;color:#64748b;">
+              ${Number(m.price).toLocaleString('ko-KR')}원
+            </small>
+          </div>
+          <div class="editor-menu-actions">
+            <button type="button" class="secondary"
+                    data-action="edit" data-id="${m.id}">수정</button>
+            <button type="button" class="muted"
+                    data-action="delete" data-id="${m.id}">삭제</button>
+          </div>
+        </div>
+      `).join('') : '<p class="note">등록된 메뉴가 없습니다.</p>'}
+    </div>
 
-  if (action === '1') {
-    const name = prompt('새 메뉴 이름');
-    if (name === null) return;
+    <h3 style="margin-top:24px;">+ 새 메뉴 추가</h3>
 
-    const priceInput = prompt('메뉴 가격 (원)');
-    if (priceInput === null) return;
+    <form id="addMenuForm">
+      <div class="editor-field">
+        <label for="menuName">메뉴 이름</label>
+        <input id="menuName" maxlength="80" required
+               placeholder="예: 김치찌개">
+      </div>
 
-    const price = Number(priceInput);
+      <div class="editor-field">
+        <label for="menuPrice">가격 (원)</label>
+        <input id="menuPrice" type="number" min="0"
+               max="1000000" required placeholder="예: 9000">
+      </div>
 
-    if (
-      !name.trim() ||
-      name.trim().length > 80 ||
-      !Number.isInteger(price) ||
-      price < 0 ||
-      price > 1000000
-    ) {
+      <div class="editor-actions">
+        <button type="submit" class="primary">메뉴 추가</button>
+      </div>
+    </form>
+  `);
+
+  $('addMenuForm').onsubmit = async e => {
+    e.preventDefault();
+
+    const name = $('menuName').value.trim();
+    const priceInput = $('menuPrice').value;
+
+    if (!name || name.length > 80 || !validPrice(priceInput, true)) {
       alert('메뉴 이름과 가격을 확인해 주세요.');
       return;
     }
+
+    const btn = e.currentTarget.querySelector('[type=submit]');
+    btn.disabled = true;
 
     const { error } = await client
       .from('restaurant_menus')
       .insert({
         restaurant_id: restaurant.id,
-        name: name.trim(),
-        price
+        name,
+        price: Number(priceInput)
       });
 
-    if (error) alert('추가 실패: ' + error.message);
-    else {
-      alert('메뉴가 등록되었습니다!');
-
-await loadMenus();
-render();
-return manageMenus(restaurant);
-
-    }
-  }
-
-  if (action === '2' || action === '3') {
-    if (!menus.length) {
-      alert('등록된 메뉴가 없습니다.');
+    if (error) {
+      alert('메뉴 추가 실패: ' + error.message);
+      btn.disabled = false;
       return;
     }
 
-    const indexInput = prompt('수정 또는 삭제할 메뉴 번호');
-    if (indexInput === null) return;
+    await loadMenus();
+    render();
+    openMenuEditor(restaurant);
+  };
 
-    const index = Number(indexInput) - 1;
+  $('editorMenuList').onclick = async e => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
 
-    if (!Number.isInteger(index) || !menus[index]) {
-      alert('올바른 메뉴 번호를 입력하세요.');
+    const menu = menus.find(m => m.id === btn.dataset.id);
+    if (!menu) return;
+
+    if (btn.dataset.action === 'edit') {
+      openMenuItemEditor(restaurant, menu);
       return;
     }
 
-    const menu = menus[index];
-
-    if (action === '2') {
-      const name = prompt('메뉴 이름 수정', menu.name);
-      if (name === null) return;
-
-      const priceInput = prompt('가격 수정', menu.price);
-      if (priceInput === null) return;
-
-      const price = Number(priceInput);
-
-      if (
-        !name.trim() ||
-        name.trim().length > 80 ||
-        !Number.isInteger(price) ||
-        price < 0 ||
-        price > 1000000
-      ) {
-        alert('메뉴 이름과 가격을 확인해 주세요.');
-        return;
-      }
-
-      const { error } = await client
-        .from('restaurant_menus')
-        .update({ name: name.trim(), price })
-        .eq('id', menu.id);
-
-      if (error) alert('수정 실패: ' + error.message);
-      else {
-        alert('메뉴가 수정되었습니다!');
-
-await loadMenus();
-render();
-return manageMenus(restaurant);
-
-      }
-    }
-
-    if (action === '3') {
+    if (btn.dataset.action === 'delete') {
       if (!confirm(`${menu.name} 메뉴를 삭제할까요?`)) return;
+
+      btn.disabled = true;
 
       const { error } = await client
         .from('restaurant_menus')
         .delete()
-        .eq('id', menu.id);
+        .eq('id', menu.id)
+        .eq('restaurant_id', restaurant.id);
 
-      if (error) alert('삭제 실패: ' + error.message);
-      else {
-        alert('메뉴가 삭제되었습니다!');
-
-await loadMenus();
-render();
-return manageMenus(restaurant);
-
+      if (error) {
+        alert('삭제 실패: ' + error.message);
+        btn.disabled = false;
+        return;
       }
+
+      await loadMenus();
+      render();
+      openMenuEditor(restaurant);
     }
-  }
+  };
+}
+
+function openMenuItemEditor(restaurant, menu) {
+  openEditor(`${menu.name} 수정`, `
+    <form id="editMenuForm">
+      <div class="editor-field">
+        <label for="editMenuName">메뉴 이름</label>
+        <input id="editMenuName" maxlength="80" required
+               value="${safe(menu.name)}">
+      </div>
+
+      <div class="editor-field">
+        <label for="editMenuPrice">가격 (원)</label>
+        <input id="editMenuPrice" type="number" min="0"
+               max="1000000" required value="${menu.price}">
+      </div>
+
+      <div class="editor-actions">
+        <button type="button" id="backToMenus" class="muted">
+          메뉴 목록
+        </button>
+        <button type="submit" class="primary">
+          변경사항 저장
+        </button>
+      </div>
+    </form>
+  `);
+
+  $('backToMenus').onclick = () => openMenuEditor(restaurant);
+
+  $('editMenuForm').onsubmit = async e => {
+    e.preventDefault();
+
+    const name = $('editMenuName').value.trim();
+    const priceInput = $('editMenuPrice').value;
+
+    if (!name || name.length > 80 || !validPrice(priceInput, true)) {
+      alert('메뉴 이름과 가격을 확인해 주세요.');
+      return;
+    }
+
+    const btn = e.currentTarget.querySelector('[type=submit]');
+    btn.disabled = true;
+
+    const { error } = await client
+      .from('restaurant_menus')
+      .update({ name, price: Number(priceInput) })
+      .eq('id', menu.id)
+      .eq('restaurant_id', restaurant.id);
+
+    if (error) {
+      alert('수정 실패: ' + error.message);
+      btn.disabled = false;
+      return;
+    }
+
+    await loadMenus();
+    render();
+    openMenuEditor(restaurant);
+  };
 }
 (async()=>{await load();await checkAdmin();if(client){client.auth.onAuthStateChange(()=>{setTimeout(checkAdmin,0)})}})();
