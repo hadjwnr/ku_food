@@ -110,7 +110,13 @@ function render(){
         }
       };
 
-      row.append(editBtn, deleteBtn);
+const menuBtn = document.createElement('button');
+menuBtn.textContent = '메뉴 관리';
+menuBtn.type = 'button';
+menuBtn.onclick = () => manageMenus(x);
+
+row.append(menuBtn, editBtn, deleteBtn);
+
     }
 
     el.append(row);
@@ -128,4 +134,134 @@ $('resetHistory').onclick=()=>{history=[];localStorage.setItem(historyKey,'[]');
 $('login').onclick=async()=>{if(!client)return alert('Supabase 연결 설정을 먼저 완료하세요.');const email=$('email').value.trim(),password=$('password').value;if(!email||!password)return alert('이메일과 비밀번호를 입력하세요.');$('login').disabled=true;const {error}=await client.auth.signInWithPassword({email,password});$('password').value='';$('login').disabled=false;if(error)return alert('로그인 실패: '+error.message);await checkAdmin()};
 $('logout').onclick=async()=>{if(!client)return;const {error}=await client.auth.signOut();if(error)return alert(error.message);await checkAdmin()};
 $('addForm').onsubmit=async e=>{e.preventDefault();if(!client||!admin)return;const name=$('name').value.trim(),price=Number($('price').value);if(!name||name.length>60||!Number.isInteger(price)||price<=0||price>1000000)return alert('이름과 가격을 확인하세요.');const btn=$('addForm').querySelector('[type=submit]');btn.disabled=true;const {error}=await client.from('restaurants').insert({name,category:$('newCategory').value,price});btn.disabled=false;if(error)return alert('추가 실패: '+error.message);$('addForm').reset();await load()};
+async function manageMenus(restaurant) {
+  if (!client || !admin) return;
+
+  const { data, error } = await client
+    .from('restaurant_menus')
+    .select('id,name,price')
+    .eq('restaurant_id', restaurant.id)
+    .order('name');
+
+  if (error) {
+    alert('메뉴 조회 실패: ' + error.message);
+    return;
+  }
+
+  const menus = data || [];
+
+  const message = menus.length
+    ? menus.map((m, i) =>
+        `${i + 1}. ${m.name} - ${m.price.toLocaleString()}원`
+      ).join('\n')
+    : '등록된 메뉴가 없습니다.';
+
+  const action = prompt(
+    `${restaurant.name} 메뉴 관리\n\n${message}\n\n` +
+    '1: 메뉴 추가\n2: 메뉴 수정\n3: 메뉴 삭제\n0: 닫기'
+  );
+
+  if (action === null || action === '0') return;
+
+  if (action === '1') {
+    const name = prompt('새 메뉴 이름');
+    if (name === null) return;
+
+    const priceInput = prompt('메뉴 가격 (원)');
+    if (priceInput === null) return;
+
+    const price = Number(priceInput);
+
+    if (
+      !name.trim() ||
+      name.trim().length > 80 ||
+      !Number.isInteger(price) ||
+      price < 0 ||
+      price > 1000000
+    ) {
+      alert('메뉴 이름과 가격을 확인해 주세요.');
+      return;
+    }
+
+    const { error } = await client
+      .from('restaurant_menus')
+      .insert({
+        restaurant_id: restaurant.id,
+        name: name.trim(),
+        price
+      });
+
+    if (error) alert('추가 실패: ' + error.message);
+    else {
+      alert('메뉴가 등록되었습니다!');
+      return manageMenus(restaurant);
+    }
+  }
+
+  if (action === '2' || action === '3') {
+    if (!menus.length) {
+      alert('등록된 메뉴가 없습니다.');
+      return;
+    }
+
+    const indexInput = prompt('수정 또는 삭제할 메뉴 번호');
+    if (indexInput === null) return;
+
+    const index = Number(indexInput) - 1;
+
+    if (!Number.isInteger(index) || !menus[index]) {
+      alert('올바른 메뉴 번호를 입력하세요.');
+      return;
+    }
+
+    const menu = menus[index];
+
+    if (action === '2') {
+      const name = prompt('메뉴 이름 수정', menu.name);
+      if (name === null) return;
+
+      const priceInput = prompt('가격 수정', menu.price);
+      if (priceInput === null) return;
+
+      const price = Number(priceInput);
+
+      if (
+        !name.trim() ||
+        name.trim().length > 80 ||
+        !Number.isInteger(price) ||
+        price < 0 ||
+        price > 1000000
+      ) {
+        alert('메뉴 이름과 가격을 확인해 주세요.');
+        return;
+      }
+
+      const { error } = await client
+        .from('restaurant_menus')
+        .update({ name: name.trim(), price })
+        .eq('id', menu.id);
+
+      if (error) alert('수정 실패: ' + error.message);
+      else {
+        alert('메뉴가 수정되었습니다!');
+        return manageMenus(restaurant);
+      }
+    }
+
+    if (action === '3') {
+      if (!confirm(`${menu.name} 메뉴를 삭제할까요?`)) return;
+
+      const { error } = await client
+        .from('restaurant_menus')
+        .delete()
+        .eq('id', menu.id);
+
+      if (error) alert('삭제 실패: ' + error.message);
+      else {
+        alert('메뉴가 삭제되었습니다!');
+        return manageMenus(restaurant);
+      }
+    }
+  }
+}
 (async()=>{await load();await checkAdmin();if(client){client.auth.onAuthStateChange(()=>{setTimeout(checkAdmin,0)})}})();
