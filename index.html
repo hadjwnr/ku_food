@@ -75,6 +75,19 @@
     flex-wrap: wrap;
   }
 }
+/* v1.5 식당 검색 및 정렬 */
+.restaurant-tools {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+@media (max-width: 520px) {
+  .restaurant-tools {
+    grid-template-columns: 1fr;
+  }
+}
 </style></head><body><main class="wrap"><header><div><span class="pill">📍 경남대학교 주변</span><h1>오늘 뭐 먹지? 🍚</h1><p>메뉴 고민은 이제 그만! 랜덤으로 골라보자.</p></div></header><section class="card"><div class="filters"><div><label for="category">음식 종류</label><select id="category"><option value="all">전체</option><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select></div><div><label for="budget">1인 예산</label><select id="budget"><option value="999999">상관없음</option><option value="8000">8,000원 이하</option><option value="10000">10,000원 이하</option><option value="15000">15,000원 이하</option><option value="20000">20,000원 이하</option></select></div></div><p class="note">가격은 직접 등록한 예상 1인 식사 금액을 기준으로 필터링합니다.</p></section><section class="card"><div class="tabs"><button id="randomTab" class="active">🎲 랜덤 추천</button><button id="wheelTab">🎡 룰렛</button></div><div id="randomPanel" class="stage"><div class="emoji">🍽️</div><h2>오늘의 한 끼를 뽑아보세요</h2><p>등록한 식당 중 조건에 맞게 추천해 드려요.</p></div><div id="wheelPanel" class="stage hidden"><div class="pointer">▼</div><div id="wheel" class="wheel"></div><p id="wheelInfo">룰렛을 돌려 오늘의 식당을 정해보세요.</p></div><div class="actions"><button class="primary" id="pick">🎲 랜덤 추천하기</button><button class="muted" id="resetHistory">최근 추천 초기화</button></div><div id="result" class="result hidden" aria-live="polite"></div></section><section class="card"><h2>🏪 식당 관리 <span id="count"></span></h2><p class="note">식당 정보를 추가하면 추천과 룰렛에 바로 반영됩니다. 식당 목록은 Supabase에 저장되며 관리자만 변경할 수 있습니다.</p><div id="adminStatus" class="note">연결 상태 확인 중...</div><div class="row" style="margin:12px 0"><input id="email" type="email" placeholder="관리자 이메일" aria-label="관리자 이메일"><input id="password" type="password" placeholder="비밀번호" aria-label="비밀번호"><button id="login" type="button" class="secondary">로그인</button><button id="logout" type="button" class="muted hidden">로그아웃</button></div><div id="adminOnly" class="hidden"><form id="addForm"><div class="row"><input id="name" placeholder="식당 이름" required maxlength="60"><select id="newCategory"><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select><input id="price" type="number" min="1" max="1000000" placeholder="예상 가격(원)" required></div><div class="actions"><button class="secondary" type="submit">+ 식당 추가</button></div></form></div>
 <div class="restaurant-tools">
   <div>
@@ -97,26 +110,7 @@
 </div>
 
 <div id="items" class="items"></div>
-```
-
-### ② CSS 추가
-
-`</style>` 바로 위에 다음 코드를 추가해.
-
 <CodeBlock language="css" editable>
-/* v1.5 식당 검색 및 정렬 */
-.restaurant-tools {
-  display: grid;
-  grid-template-columns: 1fr 180px;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-@media (max-width: 520px) {
-  .restaurant-tools {
-    grid-template-columns: 1fr;
-  }
-}
 <p class="note">지도 버튼은 네이버 지도 검색으로 이동합니다. 가격은 관리자가 입력한 예상 금액입니다.</p></section></main>
 <!-- v1.4 관리자 편집창 -->
 <div id="editorOverlay"
