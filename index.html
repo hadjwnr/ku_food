@@ -299,7 +299,11 @@
   </div>
   <div id="recentList" class="recent-list"></div>
 </div>
-</section><section class="card"><h2>🏪 식당 관리 <span id="count"></span></h2><p class="note">식당 정보를 추가하면 추천과 룰렛에 바로 반영됩니다. 식당 목록은 Supabase에 저장되며 관리자만 변경할 수 있습니다.</p><div id="adminStatus" class="note">연결 상태 확인 중...</div><div class="row" style="margin:12px 0"><input id="email" type="email" placeholder="관리자 이메일" aria-label="관리자 이메일"><input id="password" type="password" placeholder="비밀번호" aria-label="비밀번호"><button id="login" type="button" class="secondary">로그인</button><button id="logout" type="button" class="muted hidden">로그아웃</button></div><div id="adminOnly" class="hidden"><form id="addForm"><div class="row"><input id="name" placeholder="식당 이름" required maxlength="60"><select id="newCategory"><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select><input id="price" type="number" min="1" max="1000000" placeholder="예상 가격(원)" required></div>
+</section><section class="card"><h2>🏪 식당 관리 <span id="count"></span></h2><p class="note">식당 정보를 추가하면 추천과 룰렛에 바로 반영됩니다. 식당 목록은 Supabase에 저장되며 관리자만 변경할 수 있습니다.</p>
+<details class="admin-panel">
+  <summary>⚙️ 관리자 전용</summary>
+  <div class="admin-panel-content">
+<div id="adminStatus" class="note">연결 상태 확인 중...</div><div class="row" style="margin:12px 0"><input id="email" type="email" placeholder="관리자 이메일" aria-label="관리자 이메일"><input id="password" type="password" placeholder="비밀번호" aria-label="비밀번호"><button id="login" type="button" class="secondary">로그인</button><button id="logout" type="button" class="muted hidden">로그아웃</button></div><div id="adminOnly" class="hidden"><form id="addForm"><div class="row"><input id="name" placeholder="식당 이름" required maxlength="60"><select id="newCategory"><option>한식</option><option>중식</option><option>일식</option><option>양식</option><option>분식</option><option>기타</option></select><input id="price" type="number" min="1" max="1000000" placeholder="예상 가격(원)" required></div>
 <div class="recommend-scope">
   <label for="recommendScope">추천 대상</label>
   <select id="recommendScope">
@@ -338,6 +342,8 @@
   <span id="favoriteCount" class="note">즐겨찾기 0곳</span>
 </div>
 <div id="items" class="items"></div>
+  </div>
+</details>
 <CodeBlock language="css" editable>
 <p class="note">지도 버튼은 네이버 지도 검색으로 이동합니다. 가격은 관리자가 입력한 예상 금액입니다.</p></section></main>
 <!-- v1.4 관리자 편집창 -->
