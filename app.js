@@ -52,7 +52,18 @@ const filtered = () => {
   });
 };
 
-function eligible(){const list=filtered();const fresh=list.filter(x=>!history.includes(x.id));return fresh.length?fresh:list}
+function eligible() {
+  let list = filtered();
+
+  if ($('recommendScope').value === 'favorites') {
+    list = list.filter(x => favorites.includes(x.id));
+  }
+
+  const fresh = list.filter(x => !history.includes(x.id));
+
+  return fresh.length ? fresh : list;
+}
+
 function setStatus(message){$('adminStatus').textContent=message}
 function updateAdmin(){ $('adminOnly').classList.toggle('hidden',!admin);$('logout').classList.toggle('hidden',!admin);$('login').classList.toggle('hidden',admin);$('email').classList.toggle('hidden',admin);$('password').classList.toggle('hidden',admin);render() }
 async function checkAdmin(){if(!client){admin=false;setStatus('Supabase 설정이 필요합니다. README.md를 확인하세요.');updateAdmin();return}try{const {data:{user},error}=await client.auth.getUser();if(error && error.name!=='AuthSessionMissingError')throw error;if(!user){admin=false;setStatus('식당 목록은 누구나 볼 수 있습니다. 관리자만 로그인하여 수정할 수 있습니다.')}else{const {data,error:roleError}=await client.from('restaurant_admins').select('user_id').eq('user_id',user.id).maybeSingle();if(roleError)throw roleError;admin=!!data;setStatus(admin?'관리자 로그인됨 · 식당 및 메뉴 관리 가능':'로그인됨 · 관리자 권한 없음')} }catch(e){admin=false;setStatus('권한 확인 오류: '+e.message)}updateAdmin()}
@@ -378,7 +389,9 @@ renderRecent();
     JSON.stringify(history)
   );
 }
-function pick(){if(spinning)return;const list=eligible();if(!list.length){$('result').classList.remove('hidden');$('result').textContent='조건에 맞는 식당이 없습니다. 관리자가 식당을 등록하거나 필터를 변경해 주세요.';return}if(mode==='random'){show(list[Math.floor(Math.random()*list.length)]);drawWheel();return}const wheelList=list.slice(0,12),idx=Math.floor(Math.random()*wheelList.length),n=wheelList.length;const desired=(360-(idx+.5)*360/n)%360;rotation=1800+((desired+360)%360);spinning=true;$('pick').disabled=true;$('wheel').style.transform=`rotate(${rotation}deg)`;$('wheelInfo').textContent='두근두근...';setTimeout(()=>{show(wheelList[idx]);$('wheelInfo').textContent=`🎉 ${wheelList[idx].name}!`;$('pick').disabled=false;spinning=false;drawWheel()},4100)}
+function pick(){if(spinning)return;const list=eligible();if(!list.length){$('result').classList.remove('hidden');$('result').textContent=  $('recommendScope').value === 'favorites'
+    ? '조건에 맞는 즐겨찾기 식당이 없습니다. 식당을 즐겨찾기에 추가하거나 음식 종류·예산을 변경해 주세요.'
+    : '조건에 맞는 식당이 없습니다. 음식 종류·예산을 변경해 주세요.' ;return}if(mode==='random'){show(list[Math.floor(Math.random()*list.length)]);drawWheel();return}const wheelList=list.slice(0,12),idx=Math.floor(Math.random()*wheelList.length),n=wheelList.length;const desired=(360-(idx+.5)*360/n)%360;rotation=1800+((desired+360)%360);spinning=true;$('pick').disabled=true;$('wheel').style.transform=`rotate(${rotation}deg)`;$('wheelInfo').textContent='두근두근...';setTimeout(()=>{show(wheelList[idx]);$('wheelInfo').textContent=`🎉 ${wheelList[idx].name}!`;$('pick').disabled=false;spinning=false;drawWheel()},4100)}
 function setMode(next){if(spinning)return;mode=next;$('randomTab').classList.toggle('active',mode==='random');$('wheelTab').classList.toggle('active',mode==='wheel');$('randomPanel').classList.toggle('hidden',mode!=='random');$('wheelPanel').classList.toggle('hidden',mode!=='wheel');$('pick').textContent=mode==='random'?'🎲 랜덤 추천하기':'🎡 룰렛 돌리기';$('result').classList.add('hidden');drawWheel()}
 $('randomTab').onclick=()=>setMode('random');$('wheelTab').onclick=()=>setMode('wheel');$('pick').onclick=pick;$('category').onchange=drawWheel;$('budget').onchange=drawWheel;
 $('resetHistory').onclick=()=>{history=[];localStorage.setItem(historyKey,'[]');drawWheel();$('result').classList.add('hidden')};
@@ -666,5 +679,17 @@ $('clearRecent').onclick = () => {
   localStorage.setItem(recentKey, '[]');
   renderRecent();
 };
+
+$('recommendScope').addEventListener('change', () => {
+  const favoritesMode =
+    $('recommendScope').value === 'favorites';
+
+  $('scopeInfo').textContent = favoritesMode
+    ? '즐겨찾기한 식당 중 음식 종류와 예산에 맞는 곳에서 추천합니다.'
+    : '음식 종류와 예산에 맞는 전체 식당에서 추천합니다.';
+
+  $('result').classList.add('hidden');
+  drawWheel();
+});
 
 (async()=>{await load();await checkAdmin();if(client){client.auth.onAuthStateChange(()=>{setTimeout(checkAdmin,0)})}})();
