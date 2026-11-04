@@ -25,6 +25,23 @@ let favoritesOnly = false;
 const historyKey='knu-food-history-v2';
 try{history=JSON.parse(localStorage.getItem(historyKey)||'[]');if(!Array.isArray(history))history=[]}catch{history=[]}
 const colors=['#93c5fd','#fda4af','#fde68a','#86efac','#c4b5fd','#fdba74','#67e8f9','#f9a8d4'];
+function validateMapUrl(value) {
+  const input = String(value || '').trim();
+  if (!input) return '';
+  try {
+    const url = new URL(input);
+    const host = url.hostname.toLowerCase();
+    const allowed = ['map.naver.com', 'm.map.naver.com', 'naver.me', 'maps.naver.com', 'map.kakao.com', 'place.map.kakao.com', 'kko.kakao.com'];
+    if (url.protocol !== 'https:' || !allowed.includes(host) || url.username || url.password) return null;
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+function restaurantMapUrl(restaurant) {
+  return validateMapUrl(restaurant.map_url) ||
+    `https://map.naver.com/p/search/${encodeURIComponent('경남대학교 ' + restaurant.name)}`;
+}
 const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 const filtered = () => {
@@ -74,7 +91,7 @@ async function load() {
 
   const { data, error } = await client
     .from('restaurants')
-    .select('id,name,category,price')
+    .select('id,name,category,price,map_url')
     .order('name');
 
   if (error) {
@@ -375,10 +392,10 @@ function show(x, saveHistory = true) {
     ${menuHtml}
 
     <a
-      href="https://map.naver.com/p/search/${encodeURIComponent('경남대학교 ' + x.name)}"
+      href="${safe(restaurantMapUrl(x))}"
       target="_blank"
       rel="noopener noreferrer"
-    >🗺️ 네이버 지도에서 검색</a>
+    >🗺️ ${x.map_url && validateMapUrl(x.map_url) ? '지도에서 위치 보기' : '네이버 지도에서 검색'}</a>
   `;
 
   $('resultFavorite').onclick = () => {
@@ -425,7 +442,26 @@ $('password').addEventListener('keydown', (event) => {
   }
 });
 $('logout').onclick=async()=>{if(!client)return;const {error}=await client.auth.signOut();if(error)return alert(error.message);await checkAdmin()};
-$('addForm').onsubmit=async e=>{e.preventDefault();if(!client||!admin)return;const name=$('name').value.trim(),price=Number($('price').value);if(!name||name.length>60||!Number.isInteger(price)||price<=0||price>1000000)return alert('이름과 가격을 확인하세요.');const btn=$('addForm').querySelector('[type=submit]');btn.disabled=true;const {error}=await client.from('restaurants').insert({name,category:$('newCategory').value,price});btn.disabled=false;if(error)return alert('추가 실패: '+error.message);$('addForm').reset();await load()};
+$('addForm').onsubmit = async e => {
+  e.preventDefault();
+  if (!client || !admin) return;
+  const name = $('name').value.trim();
+  const price = Number($('price').value);
+  const mapUrl = validateMapUrl($('newMapUrl').value);
+  if (!name || name.length > 60 || !Number.isInteger(price) || price <= 0 || price > 1000000) {
+    return alert('이름과 가격을 확인하세요.');
+  }
+  if (mapUrl === null) return alert('네이버 지도 또는 카카오맵의 HTTPS 주소를 입력하세요.');
+  const btn = $('addForm').querySelector('[type=submit]');
+  btn.disabled = true;
+  const { error } = await client.from('restaurants').insert({
+    name, category: $('newCategory').value, price, map_url: mapUrl || null
+  });
+  btn.disabled = false;
+  if (error) return alert('추가 실패: ' + error.message);
+  $('addForm').reset();
+  await load();
+};
 
 function openEditor(title, html) {
   if (!admin || !client) return;
@@ -479,6 +515,14 @@ function openRestaurantEditor(restaurant) {
                value="${restaurant.price}">
       </div>
 
+       <div class="editor-field">
+         <label for="editRestaurantMapUrl">지도 주소 (선택)</label>
+         <input id="editRestaurantMapUrl" type="url" maxlength="2000"
+                placeholder="https://map.naver.com/..."
+                value="${safe(restaurant.map_url || '')}">
+         <p class="note">네이버 지도 또는 카카오맵의 장소 공유 링크를 입력하세요.</p>
+       </div>
+
       <div class="editor-actions">
         <button class="primary" type="submit">변경사항 저장</button>
       </div>
@@ -491,7 +535,12 @@ function openRestaurantEditor(restaurant) {
     const name = $('editRestaurantName').value.trim();
     const category = $('editRestaurantCategory').value;
     const priceInput = $('editRestaurantPrice').value;
+    const mapUrl = validateMapUrl($('editRestaurantMapUrl').value);
 
+    if (mapUrl === null) {
+      alert('네이버 지도 또는 카카오맵의 HTTPS 주소를 입력하세요.');
+      return;
+    }
     if (!name || name.length > 60 || !validPrice(priceInput)) {
       alert('식당 이름과 가격을 확인해 주세요.');
       return;
@@ -502,7 +551,7 @@ function openRestaurantEditor(restaurant) {
 
     const { error } = await client
       .from('restaurants')
-      .update({ name, category, price: Number(priceInput) })
+      .update({ name, category, price: Number(priceInput), map_url: mapUrl || null })
       .eq('id', restaurant.id);
 
     if (error) {
