@@ -216,22 +216,28 @@ visibleRestaurants.forEach(x => {
       : '<small>등록된 메뉴가 없습니다.</small>';
 
     row.innerHTML = `
-      <div style="flex:1;min-width:0;">
-        <details>
-          <summary style="cursor:pointer;">
-            <strong>${safe(x.name)}</strong>
-            <small style="display:block;">
-${safe(x.category)} · ${menus.length ? '메뉴 최저' : '예상'} ${getRestaurantPrice(x).toLocaleString('ko-KR')}원
-            </small>
-          </summary>
-          <div style="margin-top:12px;padding:12px;border-radius:10px;background:rgba(148,163,184,0.1);">
-            ${menuHtml}
-          </div>
-        </details>
+      <div class="restaurant-card-main">
+        <div class="restaurant-card-heading">
+          <strong class="restaurant-card-name">${safe(x.name)}</strong>
+          <span class="restaurant-card-category">${safe(x.category)}</span>
+        </div>
+        <div class="restaurant-card-price">
+          ${menus.length ? '메뉴 최저' : '예상 가격'}
+          <strong>${getRestaurantPrice(x).toLocaleString('ko-KR')}원</strong>
+        </div>
+        <div class="restaurant-card-actions">
+          <details class="restaurant-menu-details">
+            <summary>🍽️ 메뉴 보기 <span class="restaurant-menu-count">${menus.length}개</span></summary>
+            <div class="restaurant-menu-list">${menuHtml}</div>
+          </details>
+          <a class="restaurant-map-link" href="${safe(restaurantMapUrl(x))}"
+             target="_blank" rel="noopener noreferrer"
+             aria-label="${safe(x.name)} 지도에서 보기">🗺️ 지도 보기</a>
+        </div>
       </div>
     `;
 
-  
+
 const favoriteBtn = document.createElement('button');
 favoriteBtn.type = 'button';
 favoriteBtn.className = 'favorite-btn';
