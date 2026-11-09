@@ -197,6 +197,49 @@ const visibleRestaurants = restaurants
     return a.name.localeCompare(b.name, 'ko');
   });
 
+// v2.2 3차: 검색 및 즐겨찾기 결과가 없을 때 안내
+if (visibleRestaurants.length === 0) {
+  const empty = document.createElement('div');
+  empty.className = 'restaurant-empty';
+  empty.setAttribute('role', 'status');
+
+  const icon = document.createElement('div');
+  icon.className = 'restaurant-empty-icon';
+  icon.textContent = restaurants.length === 0 ? '🍽️' : '🔎';
+
+  const title = document.createElement('strong');
+  const description = document.createElement('p');
+  if (restaurants.length === 0) {
+    title.textContent = '아직 등록된 식당이 없어요';
+    description.textContent = '식당이 등록되면 이곳에 목록이 표시됩니다.';
+  } else if (search && favoritesOnly) {
+    title.textContent = '검색 조건에 맞는 즐겨찾기가 없어요';
+    description.textContent = '검색어를 바꾸거나 즐겨찾기 필터를 해제해 보세요.';
+  } else if (search) {
+    title.textContent = '검색 결과가 없어요';
+    description.textContent = '식당 이름의 철자를 확인하거나 다른 검색어를 입력해 보세요.';
+  } else {
+    title.textContent = '즐겨찾기한 식당이 없어요';
+    description.textContent = '하트(♡)를 눌러 자주 가는 식당을 저장해 보세요.';
+  }
+  empty.append(icon, title, description);
+
+  if (search || favoritesOnly) {
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'secondary restaurant-empty-reset';
+    reset.textContent = '검색·필터 초기화';
+    reset.onclick = () => {
+      $('restaurantSearch').value = '';
+      favoritesOnly = false;
+      render();
+      $('restaurantSearch').focus();
+    };
+    empty.append(reset);
+  }
+  el.append(empty);
+}
+
 visibleRestaurants.forEach(x => {
 
     const row = document.createElement('div');
